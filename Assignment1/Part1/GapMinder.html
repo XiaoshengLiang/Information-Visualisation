@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang = "en" class="tas-com">
+<head>
+	<meta charset="utf-8">
+	<title>Gap Minder</title>
+	<link href="./themes/prism.css" rel="stylesheet" />
+	<link href="./themes/tas_style.css" rel="stylesheet" />
+	<script type="text/javascript" src="./d3/d3.v3.js" charset="utf-8"></script>
+	<script src="./lib/prism.js" charset="utf-8"></script>
+	<style type="text/css">
+		.axis path,
+		.axis line {
+		    fill: none;
+		    stroke: black;
+		    shape-rendering: crispEdges;
+		}
+		
+		.axis text {
+		    font-family: sans-serif;
+		    font-size: 11px;
+		}	
+	</style>
+</head>
+<body>
+
+	<h1>GAPMINDER WORLD</h1>
+	<h2>Mapping the Wealth and Health of Nations</h2>
+    <h3 id = "year_header"
+        align="center"
+        style="color:gray;"> Year:1951</h3>
+        
+        <div id = "option">
+            <input name="startButton"
+            type="button"
+            value="Start"
+            onclick="startDate()" />
+            <input name="stopButton"
+            type="button"
+            value="Stop"
+            onclick="stopData()" />
+        </div>
+
+		<script type="text/javascript">
+		
+			// Define margins
+			var margin = {top: 50, right: 80, bottom: 100, left: 100};
+			
+			//Width and height
+			var outer_width = 1000;
+			var outer_height = 500;
+			var svg_width = outer_width - margin.left - margin.right;
+			var svg_height = outer_height - margin.top - margin.bottom;
+
+			//Create SVG element as a group with the margins transform applied to it
+			var svg = d3.select("body")
+						.append("svg")
+						.attr("width", svg_width + margin.left + margin.right)
+						.attr("height", svg_height + margin.top + margin.bottom)
+						.append("g")
+						// .append("circle")
+						.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			
+                // Create a scale to scale life expectation values nicely for x axis
+				var yScale = d3.scale.pow().exponent(2)
+				                     .domain([0, 90])
+				                     .range([svg_height,0])
+	
+				// Create a scale to scale GDP calues nicely for y axis
+				var xScale = d3.scale.pow().exponent(0.5)
+									 .domain([0,60000])
+									 .range([0, svg_width])
+
+				// Create a scale to scale Population values for the size of circle
+				var rScale = d3.scale.linear()
+							   .domain([0,100000000])
+							   .range([0,3])
+							
+				// Create an x-axis connected to the x scale
+				var xAxis = d3.svg.axis()
+							  .scale(xScale)
+							  .ticks(6)
+							  .orient("bottom");
+	
+				//Define Y axis
+				var yAxis = d3.svg.axis()
+								  .scale(yScale)
+								  .ticks(5)
+								  .orient("left");
+				
+                //var parseYear = d3.time.format(%"%y").parse;
+                
+				// Call the x-axis
+				svg.append("g")
+					.attr("class", "axis")
+					.attr("transform", "translate(0," + svg_height + ")")
+					.call(xAxis);
+					
+				// Call the y axis
+				svg.append("g")
+					.attr("class", "axis")
+					.call(yAxis);
+                    
+                // Add y axis label
+                svg.append("text")
+                   .attr("class","label")
+                   .attr("text-anchor", "middle")
+                   .attr("transform", "rotate(-90)")
+                   .text("LIFE EXPECTANCY    in years")
+                   .attr("dx","-10em")
+                   .attr("dy","-2em")
+
+
+                // Add x axis label
+                svg.append("text")
+                   .attr("class","label")
+                   .attr("text-anchor", "middle")
+                   .text("INCOME PER PERSON    in US Dollars")
+                   .attr("y",svg_height+margin.top)
+                   .attr("x",svg_width/2)
+
+
+                   
+
+            display_year=1951;
+            
+            function yearFilter(value){
+                return (value.Year==display_year)
+            }
+        
+            function generateVis(){
+            
+                var filtered_datset=dataset.filter(yearFilter)
+                
+                // Add the circle(dot)
+                var circle=svg.selectAll("circle")
+                .data(filtered_datset)
+                circle.attr("cx", function(d){
+                        return xScale(d.GDP);
+                        })
+                .attr("cy", function(d){
+                        return yScale(d.LifeExp);
+                        })
+                .attr("r", function(d){
+                        return rScale(d.Population);
+                        })
+                .style("stroke","black")
+                .style("stroke-width",0.5)
+                .style("opacity","0.75")
+                .attr("fill",function(d){
+                if(d.Country=="India")
+                      return "teal"
+                if(d.Region=="Asia"&&"Oceania"&&"Central America"&&"Australia")
+                        return "deeppink"
+                if(d.Country=="China")
+                        return "deeppink"
+                if(d.Region=="Europe")
+                        return "yellow"
+                if(d.Region=="Africa")
+                        return "blue"
+                if(d.Region=="North America"&&"South America")
+                        return "green"
+                });
+                
+                
+                circle.enter()
+                      .append("circle")
+                // Remove circle not longer hava a matching data element
+                circle.exit().remove();
+
+
+                d3.select("#year_header").text("Year:"+display_year)
+
+            }
+            
+            
+            function startDate(){
+			// Load the file data.csv and generate a visualisation based on it
+			d3.csv("./data/Gapminder_All_Time.csv", function(error, data){
+				
+				// handle any data loading errors
+				if(error){
+					console.log("Something went wrong");
+					console.log(error);
+				}else{
+					console.log("Data Loaded");
+					
+					// Assign  the data object loaded to the global dataset variable
+					dataset = data;
+					
+					// Generate the visualisation
+					generateVis();
+                   
+                   // Interate through our avilable years
+                   setInterval(function(){
+                               display_year=display_year+1;
+                               if(display_year>2015){
+                               display_year=2015;
+                               }
+                               generateVis();
+                               },150);
+                        }
+                   });
+            }
+        
+        function stopData(){
+            // Load the file data.csv and generate a visualisation based on it
+                   // Interate through our avilable years
+                   setInterval(function(){
+                               display_year=display_year+1;
+                            });
+                  
+        }
+
+		</script>
+</body>
+</html>
